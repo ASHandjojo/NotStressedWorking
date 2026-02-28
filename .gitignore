@@ -1,6 +1,26 @@
 # Prerequisites
 *.d
-*.DS_STORE
+*.DS_Store
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.pyo
+.env
+*.db
+*.sqlite
+*.sqlite3
+.venv/
+venv/
+env/
+
+# --- C++ build outputs ---
+cpp/vitals_stub
+cpp/*.o
+cpp/*.out
+
+# --- Misc ---
+.DS_Store
 
 # Compiled Object files
 *.slo
