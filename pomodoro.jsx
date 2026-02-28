@@ -10,7 +10,7 @@ export default function PomodoroTimer() {
   const [mode, setMode] = useState("work");
   const [timeRemaining, setTimeRemaining] = useState(MODES.work.duration);
   const [isRunning, setIsRunning] = useState(false);
-
+  //reset timer when mode changesg
   useEffect(() => {
     setTimeRemaining(MODES[mode].duration);
     setIsRunning(false);
@@ -26,23 +26,26 @@ export default function PomodoroTimer() {
     } else if (timeRemaining === 0) {
       setIsRunning(false);
       clearInterval(interval);
+
+      setTimeRemaining(MODES[mode].duration);
     }
 
     return () => clearInterval(interval);
-  }, [isRunning, timeRemaining]);
+  }, [isRunning, timeRemaining, mode]);
 
   const toggleTimer = () => setIsRunning(!isRunning);
-  
+  //reset timer to current mode duration
   const resetTimer = () => {
     setIsRunning(false);
     setTimeRemaining(MODES[mode].duration);
   };
-
+  //switch mode and reset timer
   return (
     <div className="pomodoro-timer">
       <h2>{MODES[mode].label}</h2>
       <div className="time-display">
-        {Math.floor(timeRemaining / 60)}:{String(timeRemaining % 60).padStart(2, "0")}
+        {Math.floor(timeRemaining / 60)}:
+        {String(timeRemaining % 60).padStart(2, "0")}
       </div>
       <div className="controls">
         <button onClick={toggleTimer}>{isRunning ? "Pause" : "Start"}</button>
