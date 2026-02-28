@@ -21,6 +21,7 @@ cpp/*.out
 
 # --- Misc ---
 .DS_Store
+*./node_modules
 
 # Compiled Object files
 *.slo
