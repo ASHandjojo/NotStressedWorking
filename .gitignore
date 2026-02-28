@@ -1,6 +1,7 @@
 # Prerequisites
 *.d
-*.DS_STORE
+*.DS_Store
+*./node_modules
 
 # Compiled Object files
 *.slo
