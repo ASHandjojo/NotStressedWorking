@@ -16,7 +16,7 @@ export default function PomodoroTimer() {
     setIsRunning(false);
   }, [mode]);
 
-  useEffect(() => {
+   useEffect(() => {
     let interval = null;
 
     if (isRunning && timeRemaining > 0) {
@@ -24,17 +24,19 @@ export default function PomodoroTimer() {
         setTimeRemaining((prev) => prev - 1);
       }, 1000);
     } else if (timeRemaining === 0) {
-      setIsRunning(false);
       clearInterval(interval);
 
-      setTimeRemaining(MODES[mode].duration);
+      const nextMode = mode === "work" ? "short" : "work";
+      setMode(nextMode);
+      setTimeRemaining(MODES[nextMode].duration);
+
+      setIsRunning(true);
     }
 
     return () => clearInterval(interval);
   }, [isRunning, timeRemaining, mode]);
 
-  const toggleTimer = () => setIsRunning(!isRunning);
-  //reset timer to current mode duration
+  const toggleTimer = () => setIsRunning(!isRunning);  //reset timer to current mode duration
   const resetTimer = () => {
     setIsRunning(false);
     setTimeRemaining(MODES[mode].duration);
