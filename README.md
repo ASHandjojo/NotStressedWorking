@@ -129,44 +129,6 @@
 
 ---
 
-## Project Structure
-
-```
-NotStressedWorking/
-├── .env                        ← gitignored — your local secrets
-├── .env.example                ← committed — documents required env vars
-│
-├── swift/
-│   ├── NotStressedApp.swift      ← @main iOS app entry point
-│   ├── ContentView.swift         ← SwiftUI root view
-│   ├── VitalsStreamer.swift       ← SDK integration + HTTP POST to server
-│   └── README.md                 ← Xcode setup instructions
-│
-├── server/
-│   ├── app/
-│   │   ├── __init__.py
-│   │   ├── main.py             ← FastAPI entry point + lifespan
-│   │   ├── config.py           ← settings loaded from .env
-│   │   ├── database.py         ← SQLite engine + table creation
-│   │   ├── models.py           ← User, Session, MetricSample
-│   │   ├── auth.py             ← JWT auth + register/login routes
-│   │   ├── vitals_ingest.py    ← POST /vitals/ingest (receives from iOS)
-│   │   ├── vitals_reader.py    ← shared state + optional C++ stub reader
-│   │   ├── websocket.py        ← /ws WebSocket endpoint
-│   │   ├── sessions.py         ← /session/* endpoints
-│   │   └── llm_feedback.py     ← /llm-feedback stub
-│   ├── requirements.txt
-│   └── README.md
-│
-├── cpp/
-│   ├── vitals_binary_stub.cpp    ← dev stub (simulates iPhone vitals)
-│   └── README.md
-│
-└── README.md                     ← this file
-```
-
----
-
 ## WebSocket Contract
 
 > **For the frontend team:** connect to `ws://localhost:8000/ws`

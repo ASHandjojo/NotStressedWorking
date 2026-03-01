@@ -177,27 +177,43 @@ def apply_crunch_logic(
     return all_tasks, notes
 
 
-def generate_schedule(tasks: list[TaskState]) -> list[dict]:
+def generate_schedule(
+    tasks: list[TaskState],
+    analytics: dict[str, float] | None = None,
+) -> list[dict]:
     """
-    Order incomplete tasks by priority and return a session list.
+    Return ALL tasks as a session list — incomplete ones first (sorted by id),
+    completed ones appended after.
 
-    DETERMINISTIC — sorted by id, completed tasks excluded, no LLM.
-    Session length = task's current estimated_minutes (may be post-compression).
-    Tasks may be worked on and completed in any order — no sequencing is enforced.
+    For completed tasks, estimated_minutes is replaced with the actual minutes
+    spent (from analytics) so the frontend can show real time vs estimated.
+    Falls back to the original estimate if analytics has no entry.
+
+    DETERMINISTIC — no LLM.
     """
+    analytics = analytics or {}
     incomplete = sorted(
         [t for t in tasks if not t["completed"]],
         key=lambda t: t["id"],
     )
-    return [
-        {
+    completed = sorted(
+        [t for t in tasks if t["completed"]],
+        key=lambda t: t["id"],
+    )
+    def _row(t: TaskState) -> dict:
+        actual = analytics.get(t["id"])
+        minutes = (
+            round(actual) if t["completed"] and actual
+            else t["estimated_minutes"]
+        )
+        return {
             "id": t["id"],
             "description": t["description"],
-            "estimated_minutes": t["estimated_minutes"],
-            "session_length_minutes": t["estimated_minutes"],
+            "estimated_minutes": minutes,
+            "session_length_minutes": minutes,
             "cognitive_load": t["cognitive_load"],
             "procrastination_risk": t["procrastination_risk"],
             "was_compressed": t["was_compressed"],
+            "completed": t["completed"],
         }
-        for t in incomplete
-    ]
+    return [_row(t) for t in incomplete + completed]

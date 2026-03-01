@@ -8,12 +8,20 @@ const MODES = {
   long: { label: "LONG BREAK", duration: 15 * 60 },
 };
 
-export default function PomodoroTimer() {
+export default function PomodoroTimer({ timerConfig }) {
   const [mode, setMode] = useState("work");
   const [timeRemaining, setTimeRemaining] = useState(MODES.work.duration);
   const [isRunning, setIsRunning] = useState(false);
   const [permissionStatus, setPermissionStatus] = useState(Notification.permission);
   const [hasAskedPermission, setHasAskedPermission] = useState(false);
+
+  // timerConfig comes from the LLM analysis in App.js.
+  // Shape: { work_minutes, break_minutes, sessions_before_long_break, long_break_minutes }
+  // TODO: wire these into MODES when a new plan is generated.
+  const [activeTimerConfig, setActiveTimerConfig] = useState(timerConfig ?? null);
+  useEffect(() => {
+    if (timerConfig) setActiveTimerConfig(timerConfig);
+  }, [timerConfig]);
 
   const modeRef = useRef(mode);
 useEffect(() => {

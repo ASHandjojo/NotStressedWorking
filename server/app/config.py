@@ -37,6 +37,9 @@ class Settings:
     # JWT signing algorithm — HS256 is fine for single-server; use RS256 for multi-service
     algorithm: str = "HS256"
 
+    # Hardcoded single-user token — stored in .env, sent by frontend as Bearer token
+    static_token: str = os.getenv("STATIC_TOKEN", "")
+
     # OpenAI API key — get yours at https://platform.openai.com/api-keys
     openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
 
