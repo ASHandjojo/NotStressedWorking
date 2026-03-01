@@ -33,7 +33,7 @@ State policy:
 
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import openai
@@ -51,6 +51,10 @@ from .planner import (
     compute_remaining_required_minutes,
     generate_schedule,
 )
+
+# Demo mode: compress timeline so 1 real hour = 1 demo minute.
+# Set to 1 to disable for production.
+DEMO_SCALE: int = 60
 
 settings = get_settings()
 router = APIRouter(prefix="/v1", tags=["scheduler"])
@@ -253,7 +257,7 @@ Return ONLY valid JSON, no markdown:
         data = json.loads(raw)
         return {
             e["id"]: {
-                "estimated_minutes": max(5, int(e["estimated_minutes"])),
+                "estimated_minutes": max(1, int(e["estimated_minutes"])),
                 "cognitive_load": float(max(0.0, min(1.0, e["cognitive_load"]))),
                 "procrastination_risk": float(max(0.0, min(1.0, e["procrastination_risk"]))),
                 "action": e.get("action", "keep"),
@@ -329,6 +333,11 @@ def create_plan(req: PlanRequest):
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=f"Invalid datetime: {exc}")
 
+    # DEMO MODE: compress timeline so 1 real hour = 1 demo minute
+    if DEMO_SCALE > 1:
+        gap = (deadline_dt - current_dt).total_seconds()
+        deadline_dt = current_dt + timedelta(seconds=max(gap / DEMO_SCALE, 60))
+
     # ── DETERMINISTIC: how much productive time is left
     remaining_available = compute_remaining_available_minutes(
         deadline_dt, current_dt, req.tiredness, req.stress
@@ -337,7 +346,7 @@ def create_plan(req: PlanRequest):
     # ── LLM LAYER: soft effort estimates — feed into deterministic layer below
     llm_estimates = estimate_task_effort(
         tasks=req.tasks,
-        deadline=req.deadline,
+        deadline=deadline_dt.isoformat(),
         current_time=req.current_time,
         tiredness=req.tiredness,
         stress=req.stress,
@@ -373,7 +382,7 @@ def create_plan(req: PlanRequest):
     _state.update({
         "plan_id": plan_id,
         "tasks": task_states,
-        "deadline": req.deadline,
+        "deadline": deadline_dt.isoformat(),
         "tiredness": req.tiredness,
         "stress": req.stress,
         "analytics": {t.id: 0.0 for t in req.tasks},
@@ -455,9 +464,9 @@ def tick(req: TickRequest):
         # Compress timer config proportionally — shorter work blocks signal urgency
         if _state.get("timer_config"):
             tc = dict(_state["timer_config"])
-            tc["work_minutes"] = max(15, round(tc["work_minutes"] * crunch_scale))
-            tc["break_minutes"] = max(5, round(tc["break_minutes"] * crunch_scale))
-            tc["long_break_minutes"] = max(10, round(tc["long_break_minutes"] * crunch_scale))
+            tc["work_minutes"] = max(1, round(tc["work_minutes"] * crunch_scale))
+            tc["break_minutes"] = max(1, round(tc["break_minutes"] * crunch_scale))
+            tc["long_break_minutes"] = max(1, round(tc["long_break_minutes"] * crunch_scale))
             _state["timer_config"] = tc
 
         # If crunch still leaves us structurally over budget, flag for LLM replan

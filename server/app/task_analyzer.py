@@ -163,7 +163,15 @@ Analyse this task and provide a complete structured plan. Be realistic and speci
                 status_code=502,
                 detail="OpenAI returned an empty response. Try again.",
             )
-        return result
+        # Demo mode: 1 real hour = 1 demo minute (scale factor 60)
+        _DEMO_SCALE = 60
+        tc = result.timer_config
+        return result.model_copy(update={"timer_config": TimerConfig(
+            work_minutes=max(1, round(tc.work_minutes / _DEMO_SCALE)),
+            break_minutes=max(1, round(tc.break_minutes / _DEMO_SCALE)),
+            sessions_before_long_break=tc.sessions_before_long_break,
+            long_break_minutes=max(1, round(tc.long_break_minutes / _DEMO_SCALE)),
+        )})
 
     except openai.AuthenticationError:
         raise HTTPException(

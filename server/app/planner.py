@@ -24,7 +24,7 @@ USABLE_HOURS_PER_DAY: float = 10.0
 MIN_CAPACITY_FACTOR: float = 0.2
 
 # Fallback session length when LLM estimate is unavailable
-DEFAULT_SESSION_MINUTES: int = 25
+DEFAULT_SESSION_MINUTES: int = 2
 
 # Maximum we'll reduce any single task's time in one crunch pass (40% reduction cap)
 MAX_COMPRESSION_RATIO: float = 0.40
@@ -149,7 +149,7 @@ def apply_crunch_logic(
         original = task["estimated_minutes"]
         reducible = original * MAX_COMPRESSION_RATIO
         reduction = min(reducible, surplus)
-        task["estimated_minutes"] = max(5, round(original - reduction))
+        task["estimated_minutes"] = max(1, round(original - reduction))
         task["was_compressed"] = True
         surplus -= reduction
         notes.append(
@@ -164,7 +164,7 @@ def apply_crunch_logic(
             scale = remaining_available / total
             for task in sorted_by_low_priority:
                 original = task["estimated_minutes"]
-                task["estimated_minutes"] = max(5, round(original * scale))
+                task["estimated_minutes"] = max(1, round(original * scale))
                 task["was_compressed"] = True
             notes.append(
                 f"Global scale applied ({scale:.0%}) — all tasks shortened to fit deadline."
