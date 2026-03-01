@@ -5,9 +5,13 @@ Reads all configuration from environment variables (via .env loaded by python-do
 A single Settings instance is created at module import time and shared across all
 modules via get_settings().
 
-Design decision: using a plain dataclass + python-dotenv rather than pydantic-settings
-to keep the dependency surface minimal for hackathon speed. For production, migrate to
-pydantic-settings for type validation and cleaner error messages on missing vars.
+Required .env variables:
+  OPENAI_API_KEY   — your OpenAI key (platform.openai.com/api-keys)
+  SECRET_KEY       — random string for JWT signing
+
+Optional .env variables:
+  DB_URL                      — SQLAlchemy URL (default: sqlite:///./notstressed.db)
+  ACCESS_TOKEN_EXPIRE_MINUTES — JWT lifetime (default: 60)
 """
 
 import os
@@ -24,20 +28,17 @@ class Settings:
     # JWT signing secret — MUST be changed before any real deployment
     secret_key: str = os.getenv("SECRET_KEY", "dev-secret-key-change-me")
 
-    # Path to the compiled C++ vitals binary (stub or real Presage SDK process)
-    cpp_binary_path: str = os.getenv("CPP_BINARY_PATH", "./cpp/vitals_stub")
-
     # SQLAlchemy-compatible DB URL; SQLite for hackathon, Postgres for production
-    db_url: str = os.getenv("DB_URL", "sqlite:///./biofeedback.db")
-
-    # How often (seconds) a downsampled MetricSample row is written during a session
-    downsample_interval_seconds: int = int(os.getenv("DOWNSAMPLE_INTERVAL_SECONDS", "5"))
+    db_url: str = os.getenv("DB_URL", "sqlite:///./notstressed.db")
 
     # JWT access token lifetime in minutes
     access_token_expire_minutes: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
 
     # JWT signing algorithm — HS256 is fine for single-server; use RS256 for multi-service
     algorithm: str = "HS256"
+
+    # OpenAI API key — get yours at https://platform.openai.com/api-keys
+    openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
 
 
 # Module-level singleton — import and call get_settings() everywhere instead of
