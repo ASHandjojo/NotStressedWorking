@@ -4,6 +4,7 @@
   --green: #55c04c;
   --white: #e3e3e2ff;
   --black: #1c1c1cff;
+  --grey: rgb(162, 150, 150);
 }
 
 .App h1 {
@@ -12,6 +13,12 @@
   max-height: 100vh;
   margin: 0px;
   max-height: 100vh;
+  font-size: 7vw;
+}
+
+.App h2 {
+  font-size: 3vw;
+  margin: 0px;
 }
 
 .niceButton {
@@ -22,8 +29,7 @@
   border-radius: 1vw;
   color: var(--black);
   font-weight: 700;
-  margin-left: 1vw;
-
+  margin-right: 1vw;
 }
 
 .niceButton:hover {
@@ -31,6 +37,43 @@
   filter: brightness(110%);
 }
 
+
+
 body {
   background-color: var(--white);
 }
+
+.wide {
+  width: 15.5vw;
+}
+
+.pomodoro-timer {
+  background-color: var(--red);
+  margin-left: 2vw;
+  max-width: 38vw;
+  border: 0px;
+  outline: 0px;
+  text-align: center;
+  padding: 1vw;
+  border-radius: 1vw;
+}
+
+.time-display {
+  font-size: 4vw;
+  font-weight: 600;
+  color: white;
+}
+
+#toDoList {
+  display: inline-block;
+  max-width: 38vw;
+  min-width: 38vw;
+  border-radius: 1vw;
+  text-align: center;
+  float: right;
+  height: 20vw;
+  background-color: var(--grey);
+  margin-right: 2vw;
+}
+
+#thing {}
