@@ -1,6 +1,8 @@
 import './App.css';
 import './components/Timer'
 import React, { useState, useEffect, useRef } from 'react'
+import PomodoroTimer from './pomodoro.jsx';
+
 
 const thresholds = {
   stress: 50,
@@ -28,6 +30,7 @@ function App() {
   const graph = useRef(null)
   const [currTime, setCurrTime] = useState(time.maxTime)
   const EYE = useRef(null)
+
 
   useEffect(() => {
     const websocket = new WebSocket('ws://127.0.0.1:8080');
@@ -130,6 +133,9 @@ function App() {
       <p id="vitals">I am stressed: {(isStressed) ? "yes" : "no"}</p>
       <canvas id="a" width="900" height="500" style={{ "width": "45vw", "height": "25vw", "backgroundColor": "#f7d9d9" }} ref={graph}></canvas>
       <canvas id="b" width="688" height="400" style={{ "width": "45vw", "height": "25vw", "backgroundColor": "#f7d9d9" }} ref={EYE}></canvas>
+      <div style={{ marginTop: "20px", border: "1px solid #ccc", padding: "20px", borderRadius: "10px" }}>
+        <PomodoroTimer />
+      </div>
 
     </div >
   );
