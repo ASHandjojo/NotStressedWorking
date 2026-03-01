@@ -326,12 +326,6 @@ Response includes `remaining_available_minutes`, `remaining_required_minutes`,
 
 ## Future Steps / TODOs
 
-### Security
-- [ ] Hash passwords with bcrypt (`passlib`) in `auth.py`.
-- [ ] Add refresh token support.
-- [ ] Rate-limit `/auth/login`.
-- [ ] Restrict CORS `allow_origins` to the frontend's domain.
-
 ### Scheduling Engine
 - [ ] Persist plan state to Redis so it survives server restarts.
 - [ ] Per-user plan state (currently single global — fine for demo).
