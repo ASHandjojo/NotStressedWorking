@@ -15,6 +15,10 @@
 
 const BASE = "http://localhost:8000";
 
+// Token comes from REACT_APP_API_TOKEN in src/.env — injected at build time by CRA.
+// All auth-gated calls use this automatically; nothing is stored in component state.
+const API_TOKEN = process.env.REACT_APP_API_TOKEN ?? "";
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 async function request(path, options = {}) {
@@ -135,21 +139,21 @@ export async function debugState() {
   return request("/v1/debug/state");
 }
 
-// ── Task Analysis (auth required) ─────────────────────────────────────────────
+// ── Task Analysis (auth required) ────────────────────────────────────────────
 
 /**
- * Analyze a task with LLM (does NOT save to DB).
- * Returns complexity, subtasks, timer config, encouragement.
+ * Analyze a project prompt with LLM (does NOT save to DB).
+ * Returns complexity, subtasks[], timer config, encouragement.
  *
  * @param {string} taskName
- * @param {number} stressLevel    - 1–10
- * @param {number} tirednessLevel - 1–10
  * @param {string} token
+ * @param {number} [stressLevel]    - 1–10, optional
+ * @param {number} [tirednessLevel] - 1–10, optional
  */
-export async function analyzeTask(taskName, stressLevel, tirednessLevel, token) {
+export async function analyzeTask(taskName, stressLevel = null, tirednessLevel = null) {
   return request("/tasks/analyze", {
     method: "POST",
-    headers: authHeaders(token),
+    headers: authHeaders(API_TOKEN),
     body: JSON.stringify({
       task_name: taskName,
       stress_level: stressLevel,
@@ -162,10 +166,10 @@ export async function analyzeTask(taskName, stressLevel, tirednessLevel, token) 
  * Analyze + save a task to DB.
  * Returns the saved TaskRecord.
  */
-export async function saveTask(taskName, stressLevel, tirednessLevel, token) {
+export async function saveTask(taskName, stressLevel, tirednessLevel) {
   return request("/tasks/", {
     method: "POST",
-    headers: authHeaders(token),
+    headers: authHeaders(API_TOKEN),
     body: JSON.stringify({
       task_name: taskName,
       stress_level: stressLevel,
@@ -174,50 +178,50 @@ export async function saveTask(taskName, stressLevel, tirednessLevel, token) {
   });
 }
 
-/** List all saved tasks for the logged-in user. */
-export async function listTasks(token) {
-  return request("/tasks/", { headers: authHeaders(token) });
+/** List all saved tasks. */
+export async function listTasks() {
+  return request("/tasks/", { headers: authHeaders(API_TOKEN) });
 }
 
 /** Delete a saved task by id. */
-export async function deleteTask(taskId, token) {
+export async function deleteTask(taskId) {
   return request(`/tasks/${taskId}`, {
     method: "DELETE",
-    headers: authHeaders(token),
+    headers: authHeaders(API_TOKEN),
   });
 }
 
 // ── Sessions (auth required) ──────────────────────────────────────────────────
 
 /** Start a Pomodoro work session for a task. */
-export async function startSession(taskRecordId, subtaskIndex = 0, token) {
+export async function startSession(taskRecordId, subtaskIndex = 0) {
   return request("/sessions/start", {
     method: "POST",
-    headers: authHeaders(token),
+    headers: authHeaders(API_TOKEN),
     body: JSON.stringify({ task_record_id: taskRecordId, subtask_index: subtaskIndex }),
   });
 }
 
 /** Mark a session complete. */
-export async function completeSession(sessionId, durationMinutes, token) {
+export async function completeSession(sessionId, durationMinutes) {
   return request(`/sessions/${sessionId}/complete`, {
     method: "POST",
-    headers: authHeaders(token),
+    headers: authHeaders(API_TOKEN),
     body: JSON.stringify({ duration_minutes: durationMinutes }),
   });
 }
 
 /** Abandon a session. */
-export async function abandonSession(sessionId, token) {
+export async function abandonSession(sessionId) {
   return request(`/sessions/${sessionId}/abandon`, {
     method: "POST",
-    headers: authHeaders(token),
+    headers: authHeaders(API_TOKEN),
   });
 }
 
-/** List all sessions for the logged-in user. */
-export async function listSessions(token) {
-  return request("/sessions/", { headers: authHeaders(token) });
+/** List all sessions. */
+export async function listSessions() {
+  return request("/sessions/", { headers: authHeaders(API_TOKEN) });
 }
 
 // ── Health ────────────────────────────────────────────────────────────────────

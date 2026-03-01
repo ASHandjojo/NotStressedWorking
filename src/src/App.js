@@ -5,6 +5,7 @@ import PomodoroTimer from './pomodoro.jsx';
 import ToDoList from './ToDoList.jsx';
 
 
+
 const thresholds = {
   stress: 50,
   etc: 0
@@ -150,6 +151,10 @@ function App() {
     );
   }
 
+  // Holds the full LLM analysis response once the user submits a project prompt.
+  // timer_config goes to PomodoroTimer; subtasks are used inside ToDoList via onAnalysis.
+  const [analysis, setAnalysis] = useState(null)
+
   const updateEye = () => {
     // return
     const canvas = EYE.current
@@ -205,8 +210,8 @@ function App() {
       <canvas id="b" width="688" height="400" style={{ "position": "absolute", "margin-left": "0vw", "left": "7vw", "width": "31vw", "height": "18vw", "backgroundColor": "#00000000" }} ref={EYE}></canvas>
 
       <div id="thing">
-        <PomodoroTimer />
-        <ToDoList />
+        <PomodoroTimer timerConfig={analysis?.timer_config} />
+        <ToDoList onAnalysis={setAnalysis} />
       </div>
       {/* <div className="time-display" style={{ "color": (isRunning ? "var(--white)" : "var(--yellow)") }}>
         {Math.floor(timeRemaining / 60)}:

@@ -93,6 +93,7 @@ class ScheduledTask(BaseModel):
     cognitive_load: float
     procrastination_risk: float
     was_compressed: bool
+    completed: bool = False
 
 
 class PlanResponse(BaseModel):
@@ -359,7 +360,8 @@ def create_plan(req: PlanRequest):
         )
 
     # ── DETERMINISTIC: build ordered schedule
-    schedule = generate_schedule(task_states)
+    analytics: dict[str, float] = {t.id: 0.0 for t in req.tasks}
+    schedule = generate_schedule(task_states, analytics)
 
     # ── Persist state for /tick
     plan_id = str(uuid.uuid4())[:8]
@@ -450,7 +452,7 @@ def tick(req: TickRequest):
                 " Plan is structurally infeasible — call POST /v1/replan to reassess."
             ).strip()
 
-    schedule = generate_schedule(_state["tasks"])
+    schedule = generate_schedule(_state["tasks"], _state["analytics"])
 
     return TickResponse(
         remaining_available_minutes=remaining_available,
@@ -593,7 +595,7 @@ def replan(req: ReplanRequest):
             "Check OPENAI_API_KEY."
         )
 
-    schedule = generate_schedule(_state["tasks"])
+    schedule = generate_schedule(_state["tasks"], _state["analytics"])
 
     return PlanResponse(
         plan_id=_state["plan_id"],

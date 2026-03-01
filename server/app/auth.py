@@ -66,26 +66,24 @@ def decode_access_token(token: str) -> dict:
 
 # ── FastAPI dependency ─────────────────────────────────────────────────────────
 
+# In-memory singleton for the single hardcoded user
+_STATIC_USER = User(id=1, username="demo", hashed_password="")
+
+
 def get_current_user(
     token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_session),
 ) -> User:
     """
-    Dependency: inject into any route that requires authentication.
-    Decodes the Bearer token and returns the corresponding User row.
-
-    Usage:
-        @router.get("/protected")
-        def protected(current_user: User = Depends(get_current_user)): ...
+    Dependency: validates the Bearer token against STATIC_TOKEN from .env.
+    Returns the singleton in-memory demo user — no DB lookup required.
     """
-    payload = decode_access_token(token)
-    username: str = payload.get("sub")
-    if not username:
-        raise HTTPException(status_code=401, detail="Token missing subject claim")
-    user = db.exec(select(User).where(User.username == username)).first()
-    if not user:
-        raise HTTPException(status_code=401, detail="User not found")
-    return user
+    if not settings.static_token or token != settings.static_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return _STATIC_USER
 
 
 # ── Routes ─────────────────────────────────────────────────────────────────────
