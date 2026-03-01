@@ -1,3 +1,36 @@
+:root {
+  --red: #ce5440;
+  --yellow: #e4c258;
+  --green: #55c04c;
+  --white: #e3e3e2ff;
+  --black: #1c1c1cff;
+}
+
 .App h1 {
   text-align: center;
+  width: 100vw;
+  max-height: 100vh;
+  margin: 0px;
+  max-height: 100vh;
+}
+
+.niceButton {
+  min-width: 10vw;
+  min-height: 6vw;
+  text-align: center;
+  border: none;
+  border-radius: 1vw;
+  color: var(--black);
+  font-weight: 700;
+  margin-left: 1vw;
+
+}
+
+.niceButton:hover {
+  translate: 0px -5px;
+  filter: brightness(110%);
+}
+
+body {
+  background-color: var(--white);
 }
