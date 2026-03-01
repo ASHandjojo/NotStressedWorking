@@ -197,10 +197,10 @@ function App() {
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
       <link href="https://fonts.googleapis.com/css2?family=Overpass+Mono:wght@300..700&display=swap" rel="stylesheet" />
-      <title>Nostresso</title>
+      <title>Pomodoroculus</title>
 
 
-      <h1 style={{ 'vertical-align': 'middle', 'display': 'inline', "align": "center" }}><img style={{ 'vertical-align': 'top', 'display': 'inline;', "top": "100px", "width": "10vw", "height": "auto" }} src='./PomoLogo.png'></img>&nbsp;Pomodorocculus</h1>
+      <div style={{ justifyContent: "center", display: "flex", align: "center", alignContent: "center" }}><h1 style={{ 'vertical-align': 'middle', 'display': 'inline', "align": "center" }}><img style={{ 'vertical-align': 'top', 'display': 'inline;', "top": "100px", "width": "10vw", "height": "auto" }} src='./PomoLogo.png'></img>&nbsp;Pomodoroculus</h1></div>
 
       <img src="./sclera.png" style={{ "margin-left": "6vw", "width": "31vw", "height": "18vw", "backgroundColor": "#00000000" }}></img>
       <canvas id="b" width="688" height="400" style={{ "position": "absolute", "margin-left": "0vw", "left": "7vw", "width": "31vw", "height": "18vw", "backgroundColor": "#00000000" }} ref={EYE}></canvas>
