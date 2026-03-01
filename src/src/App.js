@@ -163,7 +163,9 @@ function App() {
     let eyeBG = new Image(688, 400)
     eyeBG.src = './sclera.png'
     cvs.drawImage(eyeBG, 0, 0, 688, 400)
-    cvs.strokeStyle = colors.Red
+
+    cvs.strokeStyle = (MODES[mode].label == "FOCUS" ? colors.Red : (MODES[mode].label == "SHORT BREAK") ? colors.Yellow : colors.Green)
+
     cvs.fillStyle = colors.Black
     cvs.lineWidth = "30"
     let arcStart = Math.PI / -2
@@ -202,8 +204,8 @@ function App() {
 
       <div style={{ justifyContent: "center", display: "flex", align: "center", alignContent: "center" }}><h1 style={{ 'vertical-align': 'middle', 'display': 'inline', "align": "center" }}><img style={{ 'vertical-align': 'top', 'display': 'inline;', "top": "100px", "width": "10vw", "height": "auto" }} src='./PomoLogo.png'></img>&nbsp;Pomodoroculus</h1></div>
 
-      <img src="./sclera.png" style={{ "margin-left": "6vw", "width": "31vw", "height": "18vw", "backgroundColor": "#00000000" }}></img>
-      <canvas id="b" width="688" height="400" style={{ "position": "absolute", "margin-left": "0vw", "left": "7vw", "width": "31vw", "height": "18vw", "backgroundColor": "#00000000" }} ref={EYE}></canvas>
+      <img src="./sclera.png" style={{ "margin-left": "3.5vw", "width": "31vw", "height": "18vw", "backgroundColor": "#00000000" }}></img>
+      <canvas id="b" width="688" height="400" style={{ "position": "absolute", "margin-left": "0vw", "left": "4.75vw", "width": "31vw", "height": "18vw", "backgroundColor": "#00000000" }} ref={EYE}></canvas>
 
       <div id="thing">
         <PomodoroTimer timerConfig={analysis?.timer_config} />
