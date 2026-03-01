@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { analyzeTask, createPlan, tick } from "./api";
 
-export default function ToDoList({ onAnalysis }) {
-  // ── Planner state ───────────────────────────────────────────────────────────
+export default function ToDoList({ onAnalysis, onTimerConfig }) {
+  // ── Planner state ─────────────────────────────────────────────────────────────
+  const [timerConfig, setTimerConfig] = useState(null);
   const [prompt, setPrompt] = useState("");
   const [deadline, setDeadline] = useState("");
   const [loading, setLoading] = useState(false);
@@ -30,7 +31,9 @@ export default function ToDoList({ onAnalysis }) {
       // Step 1: LLM breaks the project prompt into ordered subtasks
       setLoadingStep("Analyzing project…");
       const analysis = await analyzeTask(prompt);
-      onAnalysis?.(analysis);   // lift to App.js → timer_config → PomodoroTimer
+      onAnalysis?.(analysis);
+      const localTimerConfig = analysis.timer_config ?? null;
+      setTimerConfig(localTimerConfig);
 
       // Step 2: Feed subtasks into the adaptive planner
       setLoadingStep("Building your plan…");
@@ -40,7 +43,12 @@ export default function ToDoList({ onAnalysis }) {
         priority: i + 1,
       }));
 
-      const plan = await createPlan(apiTasks, deadlineUTC);
+      const plan = await createPlan(apiTasks, deadlineUTC, 0.3, 0.3, localTimerConfig);
+
+      if (plan.timer_config) {
+        setTimerConfig(plan.timer_config);
+        onTimerConfig?.(plan.timer_config);
+      }
 
       setSchedule(plan.schedule.map(s => ({ ...s, done: false })));
       setPlanSummary({
@@ -72,6 +80,12 @@ export default function ToDoList({ onAnalysis }) {
       // Completed tasks have estimated_minutes replaced with actual time spent.
       // Map completed → done for the frontend.
       setSchedule(res.schedule.map(s => ({ ...s, done: s.completed })));
+
+      // If crunch fired, the backend returns compressed timer durations — update the timer.
+      if (res.timer_config) {
+        setTimerConfig(res.timer_config);
+        onTimerConfig?.(res.timer_config);
+      }
 
       // Update the summary banner
       setPlanSummary(prev => ({
