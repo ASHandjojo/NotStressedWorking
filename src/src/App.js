@@ -2,6 +2,7 @@ import './App.css';
 import './components/Timer'
 import React, { useState, useEffect, useRef } from 'react'
 import PomodoroTimer from './pomodoro.jsx';
+import ToDoList from './ToDoList.jsx';
 
 
 const thresholds = {
@@ -46,9 +47,7 @@ function App() {
       {/* <canvas id="b" width="688" height="400" style={{ "width": "45vw", "height": "25vw", "backgroundColor": "#f7d9d9" }} ref={EYE}></canvas> */}
       <div id="thing">
         <PomodoroTimer />
-        <div id="toDoList">
-          <h2>To Do</h2>
-        </div>
+        <ToDoList />
       </div>
 
 
