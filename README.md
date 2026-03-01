@@ -1,7 +1,7 @@
-# NotStressed — Gamified Biofeedback Productivity Tool
+# pomodorocculus — Smart To-Do List Maker and Tracker
 
 > **HackIllinois 2026**  
-> A real-time biofeedback system that turns your physiological signals into a gamified focus experience.
+> An OpenAI powered to-do list where you can write down a task you want to do, and the AI will break it down into subtasks and can readjust the task list as needed depending on time remaining.
 
 ---
 
@@ -200,48 +200,6 @@ cp .env.example .env
 # Edit .env — at minimum change SECRET_KEY
 ```
 
-### 4 — Start the server
-
-```bash
-# From the project root:
-uvicorn server.app.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-The server will:
-- Create `biofeedback.db` (SQLite) on first run.
-- Spawn `./cpp/vitals_stub` automatically.
-- Print `[main] C++ process started` in the console.
-- Serve the API at `http://localhost:8000`.
-- Serve interactive docs at `http://localhost:8000/docs`.
-
----
-
-## How to Set Up the Swift iOS App
-
-See [swift/README.md](swift/README.md) for full Xcode setup instructions. Summary:
-
-1. Open Xcode → **File → New → Project** → iOS App
-2. Add SmartSpectra via **File → Add Package Dependencies…**
-   - URL: `https://github.com/Presage-Security/SmartSpectra` — Branch: `main`
-3. Copy `swift/*.swift` files into your Xcode target
-4. Add `NSCameraUsageDescription` to `Info.plist`
-5. In `VitalsStreamer.swift`, set `SERVER_URL` to your Mac’s LAN IP and `SMARTSPECTRA_API_KEY`
-6. Run on a **physical iPhone** (iOS 15+) — simulator is not supported
-
----
-
-## How to Run the C++ Dev Stub (No iPhone)
-
-Used when the iPhone is unavailable (server-only or React development).
-
-```bash
-cd cpp && g++ -O2 -o vitals_stub vitals_binary_stub.cpp && cd ..
-```
-
-The server auto-detects `CPP_BINARY_PATH` in `.env` at startup and spawns the stub.
-Set `CPP_BINARY_PATH=./cpp/vitals_stub` (already the default).
-
----
 
 ## Environment Variables
 
@@ -329,12 +287,6 @@ Response includes `remaining_available_minutes`, `remaining_required_minutes`,
 ---
 
 ## Future Steps / TODOs
-
-### Security
-- [ ] Hash passwords with bcrypt (`passlib`) in `auth.py`.
-- [ ] Add refresh token support.
-- [ ] Rate-limit `/auth/login`.
-- [ ] Restrict CORS `allow_origins` to the frontend's domain.
 
 ### Scheduling Engine
 - [ ] Persist plan state to Redis so it survives server restarts.
