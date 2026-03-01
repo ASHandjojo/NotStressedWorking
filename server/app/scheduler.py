@@ -41,6 +41,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from .config import get_settings
+from .task_analyzer import TimerConfig
 from .planner import (
     DEFAULT_SESSION_MINUTES,
     REPLAN_THRESHOLD,
@@ -66,6 +67,7 @@ _state: dict = {
     "tiredness": 0.0,
     "stress": 0.0,
     "analytics": {},     # task_id → cumulative minutes_spent (ANALYTICS ONLY)
+    "timer_config": None, # TimerConfig dict — adjusted on crunch
 }
 
 
@@ -83,6 +85,7 @@ class PlanRequest(BaseModel):
     current_time: str   # ISO 8601 — client provides system time as ground truth
     tiredness: float    # 0.0 (fresh) – 1.0 (exhausted)
     stress: float       # 0.0 (calm)  – 1.0 (overwhelmed)
+    timer_config: Optional[TimerConfig] = None  # from /tasks/analyze; adjusted on crunch
 
 
 class ScheduledTask(BaseModel):
@@ -103,7 +106,8 @@ class PlanResponse(BaseModel):
     on_track: bool
     schedule: list[ScheduledTask]
     notes: list[str]
-    task_changes: list[str] = []  # populated by /replan when tasks are skipped or reformulated
+    task_changes: list[str] = []
+    timer_config: Optional[TimerConfig] = None  # adjusted if crunch fired
 
 
 class TickRequest(BaseModel):
@@ -117,9 +121,10 @@ class TickResponse(BaseModel):
     remaining_available_minutes: float
     remaining_required_minutes: float
     on_track: bool
-    replan_needed: bool  # True when crunch can't fix the gap — call POST /v1/replan
+    replan_needed: bool
     adjustment_message: Optional[str] = None
     schedule: list[ScheduledTask]
+    timer_config: Optional[TimerConfig] = None  # updated if crunch compressed work sessions
 
 
 class ReplanRequest(BaseModel):
@@ -372,6 +377,7 @@ def create_plan(req: PlanRequest):
         "tiredness": req.tiredness,
         "stress": req.stress,
         "analytics": {t.id: 0.0 for t in req.tasks},
+        "timer_config": req.timer_config.model_dump() if req.timer_config else None,
     })
 
     return PlanResponse(
@@ -381,6 +387,7 @@ def create_plan(req: PlanRequest):
         on_track=remaining_required <= remaining_available,
         schedule=[ScheduledTask(**s) for s in schedule],
         notes=notes,
+        timer_config=req.timer_config,
     )
 
 
@@ -433,6 +440,7 @@ def tick(req: TickRequest):
     replan_needed = False
 
     if remaining_required > remaining_available:
+        crunch_scale = remaining_available / remaining_required if remaining_required > 0 else 1.0
         # DETERMINISTIC: compress — LLM is not called here, this must be instant
         _state["tasks"], crunch_notes = apply_crunch_logic(
             _state["tasks"], remaining_available
@@ -444,6 +452,14 @@ def tick(req: TickRequest):
             else "Behind schedule — all tasks shortened to fit remaining time."
         )
 
+        # Compress timer config proportionally — shorter work blocks signal urgency
+        if _state.get("timer_config"):
+            tc = dict(_state["timer_config"])
+            tc["work_minutes"] = max(15, round(tc["work_minutes"] * crunch_scale))
+            tc["break_minutes"] = max(5, round(tc["break_minutes"] * crunch_scale))
+            tc["long_break_minutes"] = max(10, round(tc["long_break_minutes"] * crunch_scale))
+            _state["timer_config"] = tc
+
         # If crunch still leaves us structurally over budget, flag for LLM replan
         if remaining_available > 0 and remaining_required > remaining_available * REPLAN_THRESHOLD:
             replan_needed = True
@@ -453,6 +469,9 @@ def tick(req: TickRequest):
             ).strip()
 
     schedule = generate_schedule(_state["tasks"], _state["analytics"])
+    current_timer_config = (
+        TimerConfig(**_state["timer_config"]) if _state.get("timer_config") else None
+    )
 
     return TickResponse(
         remaining_available_minutes=remaining_available,
@@ -461,6 +480,7 @@ def tick(req: TickRequest):
         replan_needed=replan_needed,
         adjustment_message=adjustment_message,
         schedule=[ScheduledTask(**s) for s in schedule],
+        timer_config=current_timer_config,
     )
 
 
@@ -596,6 +616,9 @@ def replan(req: ReplanRequest):
         )
 
     schedule = generate_schedule(_state["tasks"], _state["analytics"])
+    current_timer_config = (
+        TimerConfig(**_state["timer_config"]) if _state.get("timer_config") else None
+    )
 
     return PlanResponse(
         plan_id=_state["plan_id"],
@@ -605,6 +628,7 @@ def replan(req: ReplanRequest):
         schedule=[ScheduledTask(**s) for s in schedule],
         notes=notes,
         task_changes=task_changes,
+        timer_config=current_timer_config,
     )
 
 

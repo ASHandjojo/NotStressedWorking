@@ -78,7 +78,7 @@ export async function login(username, password) {
  * @param {number} stress       - 0.0–1.0
  * @returns PlanResponse
  */
-export async function createPlan(tasks, deadline, tiredness = 0.3, stress = 0.3) {
+export async function createPlan(tasks, deadline, tiredness = 0.3, stress = 0.3, timerConfig = null) {
   return request("/v1/plan", {
     method: "POST",
     headers: jsonHeaders(),
@@ -88,6 +88,7 @@ export async function createPlan(tasks, deadline, tiredness = 0.3, stress = 0.3)
       current_time: new Date().toISOString(),
       tiredness,
       stress,
+      timer_config: timerConfig,
     }),
   });
 }

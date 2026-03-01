@@ -1,7 +1,6 @@
 import './App.css';
 import './components/Timer'
 import React, { useState, useLayoutEffect, useEffect, useRef, ReactComponent } from 'react'
-import PomodoroTimer from './pomodoro.jsx';
 import ToDoList from './ToDoList.jsx';
 
 
@@ -21,8 +20,8 @@ const colors = {
   White: "#e3e3e2ff",
   Black: "#1c1c1cff"
 }
-const MODES = {
-  work: { label: "FOCUS", duration: 20 * 60 }, // 3 seconds for testing
+const DEFAULT_MODES = {
+  work: { label: "FOCUS", duration: 20 * 60 },
   short: { label: "SHORT BREAK", duration: 5 * 60 },
   long: { label: "LONG BREAK", duration: 15 * 60 },
 };
@@ -33,7 +32,8 @@ const time = {
 function App() {
   const EYE = useRef(null)
   const [mode, setMode] = useState("work");
-  const [timeRemaining, setTimeRemaining] = useState(MODES.work.duration);
+  const [MODES, setMODES] = useState(DEFAULT_MODES);
+  const [timeRemaining, setTimeRemaining] = useState(DEFAULT_MODES.work.duration);
   const [isRunning, setIsRunning] = useState(false);
   const [permissionStatus, setPermissionStatus] = useState(Notification.permission);
   const [hasAskedPermission, setHasAskedPermission] = useState(false);
@@ -129,6 +129,13 @@ function App() {
   useEffect(() => {
     setTimeout(() => { updateEye() }, 100)
   }, [ticks])
+
+  // Redraw canvas whenever timeRemaining changes (e.g. after config update while timer is stopped)
+  useEffect(() => {
+    if (!isRunning) {
+      setTimeout(() => { updateEye() }, 0)
+    }
+  }, [timeRemaining, MODES])
   function PomodoroTimer() {
     return (
       <div className="pomodoro-timer">
@@ -144,6 +151,9 @@ function App() {
           {Object.keys(MODES).map((m) => (
             <button className='niceButton' style={{ "backgroundColor": (MODES[m].label == "FOCUS" ? colors.Red : (MODES[m].label == "SHORT BREAK") ? colors.Yellow : colors.Green) }} key={m} onClick={() => { setMode(m); setTimeRemaining(MODES[m].duration); startTimer() }} disabled={mode === m}>
               {MODES[m].label}
+              <span style={{ display: "block", fontSize: "0.65em", opacity: 0.85 }}>
+                {Math.round(MODES[m].duration / 60)} min
+              </span>
             </button>
           ))}
         </div>
@@ -154,6 +164,20 @@ function App() {
   // Holds the full LLM analysis response once the user submits a project prompt.
   // timer_config goes to PomodoroTimer; subtasks are used inside ToDoList via onAnalysis.
   const [analysis, setAnalysis] = useState(null)
+
+  // When the LLM returns a timer_config, rebuild MODES and reset the current timer.
+  useEffect(() => {
+    const cfg = analysis?.timer_config;
+    if (!cfg) return;
+    const newModes = {
+      work:  { label: "FOCUS",       duration: cfg.work_minutes * 60 },
+      short: { label: "SHORT BREAK", duration: cfg.break_minutes * 60 },
+      long:  { label: "LONG BREAK",  duration: cfg.long_break_minutes * 60 },
+    };
+    setMODES(newModes);
+    setIsRunning(false);
+    setTimeRemaining(newModes[mode].duration);
+  }, [analysis]);
 
   const updateEye = () => {
     // return
@@ -206,8 +230,11 @@ function App() {
       <canvas id="b" width="688" height="400" style={{ "position": "absolute", "margin-left": "0vw", "left": "7vw", "width": "31vw", "height": "18vw", "backgroundColor": "#00000000" }} ref={EYE}></canvas>
 
       <div id="thing">
-        <PomodoroTimer timerConfig={analysis?.timer_config} />
-        <ToDoList onAnalysis={setAnalysis} />
+        <PomodoroTimer />
+        <ToDoList
+          onAnalysis={setAnalysis}
+          onTimerConfig={(cfg) => setAnalysis(prev => ({ ...(prev || {}), timer_config: cfg }))}
+        />
       </div>
       {/* <div className="time-display" style={{ "color": (isRunning ? "var(--white)" : "var(--yellow)") }}>
         {Math.floor(timeRemaining / 60)}:
