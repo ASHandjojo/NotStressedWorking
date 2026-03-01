@@ -464,9 +464,9 @@ def tick(req: TickRequest):
         # Compress timer config proportionally — shorter work blocks signal urgency
         if _state.get("timer_config"):
             tc = dict(_state["timer_config"])
-            tc["work_minutes"] = max(1, round(tc["work_minutes"] * crunch_scale))
-            tc["break_minutes"] = max(1, round(tc["break_minutes"] * crunch_scale))
-            tc["long_break_minutes"] = max(1, round(tc["long_break_minutes"] * crunch_scale))
+            tc["work_minutes"] = max(0.25, round(tc["work_minutes"] * crunch_scale, 2))
+            tc["break_minutes"] = max(0.08, round(tc["break_minutes"] * crunch_scale, 2))
+            tc["long_break_minutes"] = max(0.17, round(tc["long_break_minutes"] * crunch_scale, 2))
             _state["timer_config"] = tc
 
         # If crunch still leaves us structurally over budget, flag for LLM replan

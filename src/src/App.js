@@ -152,7 +152,9 @@ function App() {
             <button className='niceButton' style={{ "backgroundColor": (MODES[m].label == "FOCUS" ? colors.Red : (MODES[m].label == "SHORT BREAK") ? colors.Yellow : colors.Green) }} key={m} onClick={() => { setMode(m); setTimeRemaining(MODES[m].duration); startTimer() }} disabled={mode === m}>
               {MODES[m].label}
               <span style={{ display: "block", fontSize: "0.65em", opacity: 0.85 }}>
-                {Math.round(MODES[m].duration / 60)} min
+                {MODES[m].duration < 60
+                  ? `${Math.round(MODES[m].duration)}s`
+                  : `${Math.round(MODES[m].duration / 60)} min`}
               </span>
             </button>
           ))}

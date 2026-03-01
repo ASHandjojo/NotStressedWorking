@@ -38,10 +38,10 @@ class Subtask(BaseModel):
 
 
 class TimerConfig(BaseModel):
-    work_minutes: int = Field(description="Length of one focused work block in minutes")
-    break_minutes: int = Field(description="Short break length in minutes")
+    work_minutes: float = Field(description="Length of one focused work block in minutes")
+    break_minutes: float = Field(description="Short break length in minutes")
     sessions_before_long_break: int = Field(description="Work blocks before a long break")
-    long_break_minutes: int = Field(description="Long break length in minutes")
+    long_break_minutes: float = Field(description="Long break length in minutes")
 
 
 class TaskAnalysis(BaseModel):
@@ -163,14 +163,15 @@ Analyse this task and provide a complete structured plan. Be realistic and speci
                 status_code=502,
                 detail="OpenAI returned an empty response. Try again.",
             )
-        # Demo mode: 1 real hour = 1 demo minute (scale factor 60)
-        _DEMO_SCALE = 60
+        # Demo mode: scale proportionally so work = 1 min max, shorter timers stay shorter
+        _DEMO_MAX_WORK = 1.0
         tc = result.timer_config
+        scale = _DEMO_MAX_WORK / max(tc.work_minutes, 1)
         return result.model_copy(update={"timer_config": TimerConfig(
-            work_minutes=max(1, round(tc.work_minutes / _DEMO_SCALE)),
-            break_minutes=max(1, round(tc.break_minutes / _DEMO_SCALE)),
+            work_minutes=round(tc.work_minutes * scale, 2),
+            break_minutes=max(0.08, round(tc.break_minutes * scale, 2)),
             sessions_before_long_break=tc.sessions_before_long_break,
-            long_break_minutes=max(1, round(tc.long_break_minutes / _DEMO_SCALE)),
+            long_break_minutes=max(0.17, round(tc.long_break_minutes * scale, 2)),
         )})
 
     except openai.AuthenticationError:
