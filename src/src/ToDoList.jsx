@@ -94,8 +94,8 @@ export default function ToDoList({ onAnalysis }) {
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div id="toDoList">
-      <h2>To Do</h2>
+    <div id="toDoList" style={{ position: "relative", top: "-18vw", fontFamily: "Overpass Mono" }}>
+      <h2 style={{ marginTop: "1vw" }}>To Do</h2>
 
       {/* Prompt input */}
       <div style={{ margin: "10px 0" }}>
@@ -104,17 +104,18 @@ export default function ToDoList({ onAnalysis }) {
           onChange={e => setPrompt(e.target.value)}
           placeholder="Describe your project or goal… e.g. 'Build a REST API with auth and tests'"
           rows={3}
-          style={{ width: "100%", boxSizing: "border-box", resize: "vertical", padding: "8px", fontSize: "0.95rem" }}
+          style={{ width: "95%", outline: "1px solid black", borderRadius: "1vw", resize: "none", boxSizing: "border-box", resize: "vertical", padding: "8px", fontSize: "0.95rem", fontFamily: "Overpass Mono" }}
         />
       </div>
 
       {/* Deadline + Generate */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", alignItems: "center", marginBottom: "12px" }}>
-        <label style={{ fontWeight: 600, fontSize: "0.9rem" }}>Deadline:</label>
+        <label style={{ marginLeft: "2.5%", fontWeight: 600, fontSize: "0.9rem" }}>Deadline:</label>
         <input
           type="datetime-local"
           value={deadline}
           onChange={e => setDeadline(e.target.value)}
+          style={{ fontFamily: "Overpass Mono" }}
         />
         <button
           onClick={handleGenerate}

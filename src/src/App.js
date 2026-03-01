@@ -201,11 +201,7 @@ function App() {
 
 
       <h1 style={{ 'vertical-align': 'middle', 'display': 'inline', "align": "center" }}><img style={{ 'vertical-align': 'top', 'display': 'inline;', "top": "100px", "width": "10vw", "height": "auto" }} src='./PomoLogo.png'></img>&nbsp;Pomodorocculus</h1>
-      {/* <div id="buttonssns">
-        <button className="niceButton" style={{ "backgroundColor": colors.Red }}>Pomodoro</button>
-        <button className="niceButton" style={{ "backgroundColor": colors.Yellow }}>Short break</button>
-        <button className="niceButton" style={{ "backgroundColor": colors.Green }}>Long break</button>
-      </div> */}
+
       <img src="./sclera.png" style={{ "margin-left": "6vw", "width": "31vw", "height": "18vw", "backgroundColor": "#00000000" }}></img>
       <canvas id="b" width="688" height="400" style={{ "position": "absolute", "margin-left": "0vw", "left": "7vw", "width": "31vw", "height": "18vw", "backgroundColor": "#00000000" }} ref={EYE}></canvas>
 
