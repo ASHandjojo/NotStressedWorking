@@ -82,11 +82,11 @@ body {
   border-radius: 1vw;
   text-align: center;
   margin-left: auto;
-  height: 20vw;
   background-color: var(--grey);
   margin-right: 2vw;
-
   min-height: 38vh;
+  overflow-y: scroll;
+  max-height: 60vh;
 }
 
 #thing {
