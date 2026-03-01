@@ -19,9 +19,14 @@ cpp/vitals_stub
 cpp/*.o
 cpp/*.out
 
+# --- Node / React ---
+node_modules/
+src/node_modules/
+build/
+src/build/
+
 # --- Misc ---
 .DS_Store
-*./node_modules
 
 # Compiled Object files
 *.slo

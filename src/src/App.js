@@ -2,6 +2,7 @@ import './App.css';
 import './components/Timer'
 import React, { useState, useLayoutEffect, useEffect, useRef, ReactComponent } from 'react'
 import PomodoroTimer from './pomodoro.jsx';
+import ToDoList from './ToDoList.jsx';
 
 
 const thresholds = {
@@ -205,9 +206,7 @@ function App() {
 
       <div id="thing">
         <PomodoroTimer />
-        {/* <div id="toDoList">
-          <h2>To Do</h2>
-        </div> */}
+        <ToDoList />
       </div>
       {/* <div className="time-display" style={{ "color": (isRunning ? "var(--white)" : "var(--yellow)") }}>
         {Math.floor(timeRemaining / 60)}:

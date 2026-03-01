@@ -2,16 +2,13 @@
 models.py — SQLModel table definitions (ORM + Pydantic schema in one class).
 
 Three tables:
-  User          — authentication identity
-  Session       — one focus/work interval tied to a user
-  MetricSample  — downsampled vitals snapshot tied to a session
+  User        — authentication identity
+  TaskRecord  — one LLM-analysed task tied to a user; stores full analysis JSON
+  WorkSession — one Pomodoro-style work round tied to a TaskRecord
 
-Design decision: SQLModel combines SQLAlchemy table definition with Pydantic
-validation in a single class, reducing boilerplate. Fields typed Optional[X]
-map to nullable DB columns and are excluded from required Pydantic validation.
-
-Naming note: the ORM model is imported as `DBSession` in other modules to avoid
-shadowing FastAPI's `Session` dependency or Python's built-in concepts.
+Design decision: analysis_json stores the full TaskAnalysis as a serialised JSON
+string rather than normalised columns. This keeps the schema simple and flexible —
+if the LLM response schema evolves, we don't need a DB migration.
 """
 
 from datetime import datetime, timezone
@@ -23,31 +20,38 @@ from sqlmodel import Field, SQLModel
 class User(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     username: str = Field(index=True, unique=True)
-    # TODO: enforce bcrypt hashing in auth.py before storing — never store plaintext
+    # TODO: hash with bcrypt in auth.py — never store plaintext in production
     hashed_password: str
 
 
-class Session(SQLModel, table=True):  # noqa: A001  (shadows built-in, acceptable here)
+class TaskRecord(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="user.id")
-    start_time: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    end_time: Optional[datetime] = None
 
-    # Computed on session end by sessions.py
-    average_stress: Optional[float] = None
+    # Input from the user
+    task_name: str
+    stress_level: Optional[int] = None    # 1–10, self-reported
+    tiredness_level: Optional[int] = None  # 1–10, self-reported
 
-    # TODO: define focus scoring algorithm (e.g., % of time in low-stress zone)
-    focus_score: Optional[float] = None
+    # Full TaskAnalysis serialised as JSON (see task_analyzer.py for schema)
+    analysis_json: str
+
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
 
 
-class MetricSample(SQLModel, table=True):
+class WorkSession(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    session_id: int = Field(foreign_key="session.id")
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    task_record_id: int = Field(foreign_key="taskrecord.id")
+    user_id: int = Field(foreign_key="user.id")
 
-    # Raw vitals from C++ binary
-    pulse: Optional[float] = None
-    breathing: Optional[float] = None
+    # Which subtask within TaskAnalysis.subtasks (0-indexed). None = full task session.
+    subtask_index: Optional[int] = None
 
-    # TODO: populated once the stress scoring algorithm is implemented in vitals_reader.py
-    stress_score: Optional[float] = None
+    started_at: datetime
+    completed_at: Optional[datetime] = None
+    duration_minutes: Optional[int] = None  # computed on complete/abandon
+
+    # "active" | "completed" | "abandoned"
+    status: str = Field(default="active")

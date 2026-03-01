@@ -77,15 +77,18 @@ body {
 
 #toDoList {
   display: inline-block;
-  max-width: 38vw;
-  min-width: 38vw;
+  max-width: 55vw;
+  min-width: 55vw;
   border-radius: 1vw;
   text-align: center;
-  float: right;
+  margin-left: auto;
   height: 20vw;
   background-color: var(--grey);
   margin-right: 2vw;
 
+  min-height: 38vh;
 }
 
-#thing {}
+#thing {
+  display: flex;
+}

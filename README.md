@@ -1,7 +1,7 @@
-# NotStressed — Gamified Biofeedback Productivity Tool
+# pomodorocculus — Smart To-Do List Maker and Tracker
 
 > **HackIllinois 2026**  
-> A real-time biofeedback system that turns your physiological signals into a gamified focus experience.
+> An OpenAI powered to-do list where you can write down a task you want to do, and the AI will break it down into subtasks and can readjust the task list as needed depending on time remaining.
 
 ---
 
@@ -50,20 +50,21 @@
 ## Data Flow
 
 ```
-[Camera / Presage SDK]
+[iPhone — SmartSpectra Swift SDK]
         │
-        │  C++ process writes one JSON line/sec to stdout:
+        │  VitalsStreamer.swift POSTs every ~1 second:
+        │  POST /vitals/ingest
         │  {"pulse": 72.4, "breathing": 14.1, "timestamp": 1709123456.789}
         ▼
-[vitals_reader.py — stdout_reader_thread]
+[vitals_ingest.py — POST /vitals/ingest]
         │
-        │  Parses JSON → updates `latest_vitals` dict (protected by threading.Lock)
+        │  Updates `latest_vitals` dict (protected by threading.Lock)
         │
         ├──► Every DOWNSAMPLE_INTERVAL_SECONDS (default 5s):
-        │       Writes MetricSample row to SQLite (only during active session)
+        │       vitals_reader._downsample_writer_thread writes MetricSample to SQLite
         │
-        └──► On every WebSocket tick (1s):
-                Reads latest_vitals → sends JSON to connected React client
+        └──► On every WebSocket tick (~1s):
+                websocket.py reads latest_vitals → sends JSON to React frontend
 
 [React Frontend — WebSocket client]
         │
@@ -71,21 +72,36 @@
         │  Drives UI: pulse display, breathing display, stress indicator, timer
         │
         └──► REST calls for auth and session lifecycle
+
+[C++ Stub — dev mode only, optional]
+        If ./cpp/vitals_stub exists at startup, the server spawns it as a subprocess
+        and reads its stdout — same JSON format, same pipeline. Use when iPhone
+        is unavailable for local development.
 ```
 
 ---
 
 ## Layer Responsibilities
 
-### `cpp/` — Vitals Source Process
+### `swift/` — iOS Vitals Source (Primary)
 
 | File | Purpose |
-|------|---------|
-| `vitals_binary_stub.cpp` | **Development stub.** Outputs random-valued vitals JSON every second. Replace with real Presage SmartSpectra SDK calls. |
+|------|--------|
+| `NotStressedApp.swift` | `@main` iOS app entry point. |
+| `ContentView.swift` | SwiftUI root view embedding `SmartSpectraView` and starting `VitalsStreamer`. |
+| `VitalsStreamer.swift` | Reads `sdk.metricsBuffer` every second, POSTs JSON to `POST /vitals/ingest`. |
 
-- **Responsibility:** produce a continuous stream of vitals JSON on stdout.
-- **Contract with Python:** one JSON object per line, newline-terminated, flushed immediately (`fflush`).
-- **Does not know** about Python, HTTP, or the database.
+- **Requires:** physical iPhone (iOS 15+), Xcode 15+, API key from physiology.presagetech.com.
+- **Contract with server:** `POST /vitals/ingest` with `{"pulse", "breathing", "timestamp"}`.
+- **Does not know** about WebSocket, React, or SQLite.
+
+---
+
+### `cpp/` — Dev Stub (Optional, offline development)
+
+| File | Purpose |
+|------|--------|
+| `vitals_binary_stub.cpp` | **Development-only stub.** Simulates vitals via stdout when iPhone is unavailable. Auto-detected by server at startup. |
 
 ---
 
@@ -120,6 +136,12 @@ NotStressedWorking/
 ├── .env                        ← gitignored — your local secrets
 ├── .env.example                ← committed — documents required env vars
 │
+├── swift/
+│   ├── NotStressedApp.swift      ← @main iOS app entry point
+│   ├── ContentView.swift         ← SwiftUI root view
+│   ├── VitalsStreamer.swift       ← SDK integration + HTTP POST to server
+│   └── README.md                 ← Xcode setup instructions
+│
 ├── server/
 │   ├── app/
 │   │   ├── __init__.py
@@ -128,7 +150,8 @@ NotStressedWorking/
 │   │   ├── database.py         ← SQLite engine + table creation
 │   │   ├── models.py           ← User, Session, MetricSample
 │   │   ├── auth.py             ← JWT auth + register/login routes
-│   │   ├── vitals_reader.py    ← subprocess stdout reader + DB downsampler
+│   │   ├── vitals_ingest.py    ← POST /vitals/ingest (receives from iOS)
+│   │   ├── vitals_reader.py    ← shared state + optional C++ stub reader
 │   │   ├── websocket.py        ← /ws WebSocket endpoint
 │   │   ├── sessions.py         ← /session/* endpoints
 │   │   └── llm_feedback.py     ← /llm-feedback stub
@@ -136,10 +159,10 @@ NotStressedWorking/
 │   └── README.md
 │
 ├── cpp/
-│   ├── vitals_binary_stub.cpp  ← simulates Presage SDK output
+│   ├── vitals_binary_stub.cpp    ← dev stub (simulates iPhone vitals)
 │   └── README.md
 │
-└── README.md                   ← this file
+└── README.md                     ← this file
 ```
 
 ---
@@ -178,8 +201,7 @@ Interactive docs available at `http://localhost:8000/docs` once the server is ru
 |--------|------|------|-------------|
 | `GET`  | `/health` | — | Liveness check |
 | `POST` | `/auth/register` | — | Create account (form: `username`, `password`) |
-| `POST` | `/auth/login` | — | Get JWT token (form: `username`, `password`) |
-| `POST` | `/session/start` | Bearer | Begin a focus session |
+| `POST` | `/auth/login` | — | Get JWT token (form: `username`, `password`) || `POST` | `/vitals/ingest` | — | Receive vitals from iOS app (called by `VitalsStreamer.swift`) || `POST` | `/session/start` | Bearer | Begin a focus session |
 | `POST` | `/session/end` | Bearer | End session + get summary |
 | `GET` | `/session/{id}` | Bearer | Get session + all MetricSamples |
 | `POST` | `/llm-feedback` | Bearer | LLM feedback (stub) — body: `{"session_id": N}` |
@@ -216,41 +238,6 @@ cp .env.example .env
 # Edit .env — at minimum change SECRET_KEY
 ```
 
-### 4 — Start the server
-
-```bash
-# From the project root:
-uvicorn server.app.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-The server will:
-- Create `biofeedback.db` (SQLite) on first run.
-- Spawn `./cpp/vitals_stub` automatically.
-- Print `[main] C++ process started` in the console.
-- Serve the API at `http://localhost:8000`.
-- Serve interactive docs at `http://localhost:8000/docs`.
-
----
-
-## How to Compile the C++ Stub
-
-See [cpp/README.md](cpp/README.md) for detailed instructions and Presage SDK swap-in guide.
-
----
-
-## How Real Presage SDK Replaces the Stub
-
-The stub and the real SDK binary have the **same interface**: write JSON to stdout, flush after each line. The Python server does not change at all.
-
-Steps:
-1. Integrate the Presage SmartSpectra SDK into a C++ project (replace the `[STUB]` sections in `vitals_binary_stub.cpp`).
-2. Compile the new binary.
-3. Update `CPP_BINARY_PATH` in `.env` to point to the new binary.
-4. Restart the server.
-
-See [cpp/README.md](cpp/README.md) and [cpp/vitals_binary_stub.cpp](cpp/vitals_binary_stub.cpp) for the exact SDK call mapping.
-
----
 
 ## Environment Variables
 
@@ -259,43 +246,94 @@ See [.env.example](.env.example) for the full list with descriptions.
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `SECRET_KEY` | `dev-secret-key-change-me` | JWT signing secret. **Change before any deployment.** |
-| `CPP_BINARY_PATH` | `./cpp/vitals_stub` | Path to the compiled vitals binary. |
+| `CPP_BINARY_PATH` | `./cpp/vitals_stub` | Path to the C++ dev stub binary (optional — only used if file exists). |
 | `DB_URL` | `sqlite:///./biofeedback.db` | SQLAlchemy DB URL. |
 | `DOWNSAMPLE_INTERVAL_SECONDS` | `5` | How often a MetricSample row is written to DB. |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | `60` | JWT access token lifetime. |
+| `SMARTSPECTRA_API_KEY` | `your-api-key-here` | Presage API key — set in `VitalsStreamer.swift` (not read by Python server). |
+
+---
+
+## Adaptive Scheduling Engine (`/v1`)
+
+### What it does
+
+Given a list of tasks, a deadline, and the user's current stress/tiredness level,
+the engine produces a realistic, compressed work schedule and tracks whether the
+user remains on pace as time passes.
+
+### Two-layer architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  LLM Layer  (scheduler.py → estimate_task_effort)          │
+│  • Estimates effort in minutes per task                    │
+│  • Estimates cognitive_load (0–1) per task                 │
+│  • Estimates procrastination_risk (0–1) per task           │
+│  Output = SOFT SUGGESTION only. Never controls hard limits. │
+├─────────────────────────────────────────────────────────────┤
+│  Deterministic Layer  (planner.py)                        │
+│  • Computes remaining_available_minutes from wall clock    │
+│  • Computes remaining_required_minutes (sum of estimates)  │
+│  • Applies crunch compression if required > available      │
+│  • Generates priority-ordered schedule                     │
+│  This layer owns ALL hard constraints.                     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Why `current_time` is required in every request
+
+The server never derives the current time from accumulated `minutes_spent`.
+Clock-based calculations accumulate drift when ticks are missed, delayed, or
+batched. Instead, the client passes `current_time` (ISO 8601) in each request
+and the server uses that as the single source of truth for all deadline math.
+
+### Why `minutes_spent` is analytics-only
+
+`POST /v1/tick` accepts `minutes_spent` but stores it only in an analytics
+dict (visible at `GET /v1/debug/state`). It is never used to compute how much
+time is left. That calculation always comes from `deadline − current_time`.
+
+### Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/v1/plan` | Create a plan. LLM estimates effort; deterministic layer checks feasibility and compresses if needed. |
+| `POST` | `/v1/tick` | Record progress. Recomputes schedule from wall clock. Returns `on_track` + compressed schedule if behind. |
+| `GET`  | `/v1/debug/state` | Inspect in-memory plan state (tasks, analytics, deadline). |
+
+### Example: POST /v1/plan
+
+```json
+{
+  "tasks": [
+    {"id": "t1", "description": "Write report intro", "priority": 1},
+    {"id": "t2", "description": "Run experiments",    "priority": 2},
+    {"id": "t3", "description": "Fix lint warnings",   "priority": 5}
+  ],
+  "deadline":     "2026-03-02T23:59:00",
+  "current_time": "2026-03-01T10:00:00",
+  "tiredness": 0.6,
+  "stress": 0.4
+}
+```
+
+Response includes `remaining_available_minutes`, `remaining_required_minutes`,
+`on_track` (bool), `schedule` (ordered list with `session_length_minutes`,
+`cognitive_load`, `procrastination_risk`, `was_compressed`), and `notes`.
 
 ---
 
 ## Future Steps / TODOs
 
-These are tracked as `TODO` comments throughout the codebase. Summary:
-
-### Security
-- [ ] **Hash passwords** with bcrypt (`passlib`) in `auth.py` before storing.
-- [ ] Add refresh token support (short-lived access + long-lived refresh pair).
-- [ ] Rate-limit the `/auth/login` endpoint.
-- [ ] Restrict CORS `allow_origins` in `main.py` to the frontend's domain.
-
-### Vitals & Stress
-- [ ] **Implement stress scoring algorithm** in `vitals_reader.py`:
-  - HRV from pulse interval history
-  - Breathing rate deviation from personal baseline
-  - LF/HF ratio (frequency-domain HRV)
-- [ ] Swap stub binary for real **Presage SmartSpectra SDK** binary.
-- [ ] Add supervised restart logic if the C++ process crashes.
-
-### Sessions & Gamification
-- [ ] Implement `focus_score` algorithm in `sessions.py`.
-- [ ] Persist active session state to Redis for crash recovery.
-- [ ] Add session history endpoint (`GET /session/history`).
-- [ ] Define game mechanics: scoring, streaks, achievements.
-
-### LLM Feedback
-- [ ] Wire up LLM in `llm_feedback.py` (Modal or OpenAI — see module docstring).
-- [ ] Stream LLM response back to client.
+### Scheduling Engine
+- [ ] Persist plan state to Redis so it survives server restarts.
+- [ ] Per-user plan state (currently single global — fine for demo).
+- [ ] Call LLM on `/tick` to re-estimate remaining tasks when significantly behind.
+- [ ] Extend session length when ahead of schedule.
 
 ### Infrastructure
-- [ ] Add structured logging (structlog or Python's `logging` module).
-- [ ] Add proper test suite (pytest + httpx TestClient).
-- [ ] Containerise with Docker for demo deployment.
-- [ ] Replace SQLite with PostgreSQL for multi-user production.
+- [ ] Add structured logging.
+- [ ] Add pytest test suite for `planner.py` (pure functions — easy to test).
+- [ ] Containerise with Docker.
+- [ ] Replace SQLite with PostgreSQL for production.
