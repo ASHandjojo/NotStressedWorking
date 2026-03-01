@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 
 const MODES = {
   work: { label: "FOCUS", duration: 1 * 3 }, // 3 seconds for testing
-  short: { label: "SHORT BREAK", duration: 5 * 60 },
+  short: { label: "SHORT BREAK", duration: 1 * 3 },
   long: { label: "LONG BREAK", duration: 15 * 60 },
 };
 
@@ -13,10 +13,9 @@ export default function PomodoroTimer() {
   const [permissionStatus, setPermissionStatus] = useState(Notification.permission);
   const [hasAskedPermission, setHasAskedPermission] = useState(false);
 
-const modeRef = useRef(mode);
-
+  const modeRef = useRef(mode);
 useEffect(() => {
-  modeRef.current = mode;
+    modeRef.current = mode;
 }, [mode]);
 
 useEffect(() => {
